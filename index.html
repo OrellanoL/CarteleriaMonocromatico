@@ -1,0 +1,1819 @@
++<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Carteleria - Carrefour</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-gray: #f4f4f5;
+            --border-color: #e4e4e7;
+            --primary: #001a72;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            padding: 15px;
+            color: #18181b;
+        }
+
+        .card {
+            max-width: 950px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 6px;
+            color: var(--primary);
+        }
+
+        .subtitle {
+            color: #71717a;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+
+        .section-box {
+            background: #f8fafc;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: white;
+        }
+
+        .flex-gap {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-camera { background: #0284c7; color: white; width: 100%; }
+        .btn-manual { background: #3b82f6; color: white; }
+        .btn-calc { background: #000; color: white; flex: 1; }
+        .btn-print { background: #e4e4e7; color: #18181b; flex: 1; }
+        .btn-danger { background: #ef4444; color: white; padding: 6px 10px; font-size: 0.8rem; }
+        .btn-edit { background: #8b5cf6; color: white; padding: 6px 10px; font-size: 0.8rem; }
+
+        .btn-fav { background: #f59e0b; color: white; padding: 6px 12px; font-size: 0.85rem; }
+        .btn-fav-active { background: #10b981; color: white; padding: 6px 12px; font-size: 0.85rem; cursor: default; }
+
+        #reader {
+            width: 100%;
+            max-width: 450px;
+            margin: 10px auto;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .scanned-list {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .item-info { flex: 2; min-width: 180px; }
+        .item-info strong { display: block; font-size: 0.9rem; }
+        .item-info span { font-size: 0.8rem; color: #666; }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #32164d;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0;
+            user-select: none;
+        }
+
+        .item-price-input {
+            width: 90px !important;
+            text-align: right;
+            padding: 6px !important;
+        }
+
+        .item-copias-input {
+            width: 60px !important;
+            text-align: center;
+            padding: 6px !important;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .preview-grid img {
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .status-badge {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #15803d;
+            background: #dcfce7;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-results-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .search-item {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .search-item:hover {
+            background-color: #e0f2fe;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-card {
+            background: white;
+            width: 90%;
+            max-width: 580px;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+        }
+
+        .barcode-box {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        .barcode-box img {
+            max-width: 100%;
+            height: 85px;
+            object-fit: contain;
+        }
+
+        .step-pill {
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .modal-config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background: white; }
+            @page { size: A4 landscape; margin: 0; }
+            .preview-grid { display: block !important; }
+            .preview-grid img {
+                display: block;
+                page-break-after: always;
+                page-break-inside: avoid;
+                width: 100%;
+                max-height: 100vh;
+                object-fit: contain;
+                border: none;
+            }
+        }
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card no-print">
+        <div style="margin-bottom: 10px;">
+            <h1>📱 Generador de carteleria</h1>
+        </div>
+        
+        <details style="margin-bottom: 15px; background: #f0f4f9; border-radius: 8px; border: 1px solid #d0d7de; overflow: hidden;">
+            <summary style="padding: 12px 15px; font-weight: bold; color: #001a72; cursor: pointer; font-size: 14px; text-align: center; list-style: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: #e8eef5;">
+                ☰ Ir a otros generadores de cartelería...
+            </summary>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px;">
+                <button onclick="window.location.href='https://orellanol.github.io/tiendasC/'" style="width: 100%; background: linear-gradient(135deg, #0d9488, #0f766e); color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer;">
+                    🏬 Generador para Tiendas C
+                </button>
+                <button onclick="window.location.href='https://orellanol.github.io/GeneradorDeParches/'" style="width: 100%; background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer;">
+                    🔖 Generador de Parches
+                </button>
+                <button onclick="window.location.href='https://orellanol.github.io/ConsumoInmediato/'" style="width: 100%; background: linear-gradient(135deg, #e50012, #b71c1c); color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer;">
+                    ⚡ Generador de Consumo Inmediato
+                </button>
+            </div>
+        </details>
+
+        <p class="subtitle">Catálogo sincronizado desde GitHub en tiempo real. Creada por Ludmila - Sugerencias: orellanoludmila@hotmail.com</p>
+
+        <div class="section-box">
+            <label>Estado del Catálogo:</label>
+            <div id="statusCatalogo">⏳ Cargando catálogo online...</div>
+        </div>
+
+        <div class="section-box" style="margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                <label style="margin: 0;">Seleccionar Día / Formato de Promoción:</label>
+                <label class="checkbox-label" style="background: #fef3c7; padding: 6px 12px; border-radius: 6px; border: 1px solid #fde047; color: #92400e;">
+                    <input type="checkbox" id="checkModoSinFoto">
+                    🖨️ Modo Sin Foto (Estilo Góndola BN + Desglose)
+                </label>
+            </div>
+            <select id="tipoPromocionSelect">
+                <option value="miercoles">Miércoles - Cuenta Digital (10%)</option>
+                <option value="jueves" selected>Jueves - Mercado Pago (15%)</option>
+                <option value="viernes">Viernes - Cuenta Digital (15%)</option>
+                <option value="sabadoDomingo">Sábado y Domingo - Cuenta Digital (10%)</option>
+            </select>
+        </div>
+
+        <!-- VISTA DE ESCANEO -->
+        <div id="seccionEscaneo">
+            <div class="section-box">
+                <button class="btn-camera" onclick="alternarCamara()">📷 Escanear Producto con Cámara</button>
+                <div id="reader"></div>
+
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn-manual" style="background: #0284c7; width: 100%; font-size: 1rem; padding: 12px;" onclick="mostrarSeccion('modoPC')">
+                        💻 VERSIÓN PC + APP CARREFOUR
+                    </button>
+                </div>
+
+                <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <label>🔍 Buscar por Nombre:</label>
+                    <div class="search-container">
+                        <input type="text" id="inputBuscadorTexto" placeholder="Escribí el nombre del producto..." oninput="filtrarProductosPorTexto(this.value, 'listaResultadosBusqueda')">
+                        <div id="listaResultadosBusqueda" class="search-results-list"></div>
+                    </div>
+
+                    <label>📋 O Seleccionar del catálogo desplegable:</label>
+                    <div class="flex-gap" style="margin-bottom: 12px;">
+                        <select id="selectCatalogo" onchange="seleccionarDesdeDesplegable('selectCatalogo')" style="flex: 1;">
+                            <option value="">-- Buscar / Elegir producto de la lista --</option>
+                        </select>
+                    </div>
+
+                    <label>O ingresar EAN manualmente:</label>
+                    <div class="flex-gap">
+                        <input type="text" id="manualEanInput" placeholder="Ej: 7792180144829" style="flex: 1;">
+                        <button class="btn-manual" onclick="buscarEanManual()">Buscar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <label style="margin: 0;">Productos seleccionados hoy (<span id="cantProductos">0</span>):</label>
+                
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn-manual" style="background: #f59e0b; padding: 6px 12px; font-size: 0.85rem;" onclick="mostrarSeccion('favoritos')">
+                        ⭐ Mis Productos Favoritos
+                    </button>
+                    <button class="btn-danger" style="padding: 6px 12px; font-size: 0.85rem;" onclick="vaciarListaCompleta()">
+                        🗑 Vaciar Lista
+                    </button>
+                </div>
+            </div>
+
+            <div class="scanned-list" id="listaEscaneados"></div>
+
+            <div class="flex-gap" style="margin-top: 20px;">
+                <button class="btn-calc" onclick="generarCartelesDeLista(productosAEscanear)">⚡ Generar Carteles</button>
+                <button class="btn-print" onclick="imprimirPC()">🖨 Imprimir (PC)</button>
+                <button class="btn-manual" style="background: #16a34a;" onclick="descargarPDF()">📥 Descargar PDF</button>
+            </div>
+        </div>
+
+        <!-- VISTA MODO PC -->
+        <div id="seccionModoPC" style="display: none;">
+            <div class="section-box" style="background: #f0f9ff; border-color: #bae6fd;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2 style="margin: 0; color: #0369a1; font-size: 1.2rem;">💻 VERSIÓN PC + APP CARREFOUR</h2>
+                    </div>
+                    <button class="btn-manual" style="background: #6b7280;" onclick="mostrarSeccion('escaneo')">
+                        ⬅️ Volver
+                    </button>
+                </div>
+
+                <label>🔍 Buscar por Nombre:</label>
+                <div class="search-container">
+                    <input type="text" id="inputBuscadorTextoPC" placeholder="Escribí el nombre del producto..." oninput="filtrarProductosPorTexto(this.value, 'listaResultadosBusquedaPC')">
+                    <div id="listaResultadosBusquedaPC" class="search-results-list"></div>
+                </div>
+
+                <label style="margin-top: 10px;">📋 O Seleccionar del catálogo desplegable:</label>
+                <div class="flex-gap">
+                    <select id="selectCatalogoPC" onchange="seleccionarDesdeDesplegable('selectCatalogoPC')" style="flex: 1;">
+                        <option value="">-- Buscar / Elegir producto de la lista --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <label style="margin: 0;">Productos seleccionados hoy (<span id="cantProductosPC">0</span>):</label>
+                
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn-manual" style="background: #f59e0b; padding: 6px 12px; font-size: 0.85rem;" onclick="mostrarSeccion('favoritos')">
+                        ⭐ Mis Productos Favoritos
+                    </button>
+                    <button class="btn-danger" style="padding: 6px 12px; font-size: 0.85rem;" onclick="vaciarListaCompleta()">
+                        🗑 Vaciar Lista
+                    </button>
+                </div>
+            </div>
+
+            <div class="scanned-list" id="listaEscaneadosPC"></div>
+
+            <div class="flex-gap" style="margin-top: 20px;">
+                <button class="btn-calc" onclick="generarCartelesDeLista(productosAEscanear)">⚡ Generar Carteles</button>
+                <button class="btn-print" onclick="imprimirPC()">🖨 Imprimir (PC)</button>
+                <button class="btn-manual" style="background: #16a34a;" onclick="descargarPDF()">📥 Descargar PDF</button>
+            </div>
+        </div>
+
+        <!-- VISTA DE FAVORITOS -->
+        <div id="seccionFavoritos" style="display: none;">
+            <div class="section-box" style="background: #fffbe3; border-color: #fef08a;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h2 style="margin: 0; color: #b45309; font-size: 1.2rem;">⭐ Mis Productos Favoritos</h2>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-manual" style="background: #0284c7;" onclick="iniciarCargaPreciosPC()">
+                            💻 VERSIÓN PC + APP CARREFOUR
+                        </button>
+                        <button class="btn-manual" style="background: #6b7280;" onclick="mostrarSeccion('escaneo')">
+                            ⬅️ Volver
+                        </button>
+                    </div>
+                </div>
+
+                <div id="contenedorListaFavoritos"></div>
+
+                <div class="flex-gap" style="margin-top: 15px;">
+                    <button class="btn-calc" style="background: #b45309;" onclick="generarCartelesDeLista(productosFavoritos)">
+                        ⚡ Generar Carteles de TODOS los Favoritos
+                    </button>
+                    <button class="btn-print" onclick="imprimirPC()">🖨 Imprimir (PC)</button>
+                    <button class="btn-manual" style="background: #16a34a;" onclick="descargarPDF()">📥 Descargar PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-grid" id="previewGrid"></div>
+    </div>
+
+    <!-- MODAL DE CARGA EN PC -->
+    <div id="modalCargaPC" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <span class="step-pill" id="pcModalProgreso">Producto 1 de X</span>
+            <h2 id="pcModalNombreProd" style="color: #001a72; font-size: 1.2rem; margin-top: 6px;">Cargando...</h2>
+            <p id="pcModalEan" style="color: #64748b; font-size: 0.85rem; margin-bottom: 10px;">EAN: -----</p>
+
+            <div class="barcode-box" id="pcModalBarcodeContainer">
+                <img id="pcModalBarcodeImg" src="" alt="Código de barra">
+            </div>
+
+            <div id="contenedorImagenManual" style="margin-bottom: 15px; background: #fff7ed; border: 1px solid #ffedd5; padding: 12px; border-radius: 8px; text-align: left; display: none;">
+                <label style="font-size: 0.8rem; color: #c2410c; font-weight: bold; margin-bottom: 8px;">📷 Opciones para la imagen:</label>
+                <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                    <button type="button" class="btn-manual" style="background: #ea580c; font-size: 0.75rem; padding: 6px 10px; flex: 1;" onclick="mostrarOpcionFoto('url')">🌐 Pegar Link</button>
+                    <button type="button" class="btn-manual" style="background: #0284c7; font-size: 0.75rem; padding: 6px 10px; flex: 1;" onclick="mostrarOpcionFoto('archivo')">📁 Subir Archivo</button>
+                    <button type="button" class="btn-manual" style="background: #16a34a; font-size: 0.75rem; padding: 6px 10px; flex: 1;" id="btnNavegarCarrefour">🔍 Buscar en Web</button>
+                </div>
+                <div id="boxOpcionUrl">
+                    <input type="text" id="pcInputUrlFotoManual" placeholder="https://ejemplo.com/imagen.jpg" style="font-size: 0.8rem; padding: 6px;">
+                </div>
+                <div id="boxOpcionArchivo" style="display: none;">
+                    <input type="file" id="pcInputArchivoFoto" accept="image/*" style="font-size: 0.8rem; padding: 4px;" onchange="procesarFotoLocal(this)">
+                </div>
+            </div>
+
+            <div class="modal-config-grid">
+                <div>
+                    <label style="font-size: 0.75rem;">Beneficio:</label>
+                    <label class="checkbox-label" style="font-size: 0.8rem; margin-top: 4px;">
+                        <input type="checkbox" id="pcModalCheckMiCarrefour">
+                        Mi Carrefour
+                    </label>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem;">Tipo Promoción:</label>
+                    <select id="pcModalTipoPromo" style="font-size: 0.8rem; padding: 4px;" onchange="actualizarDesplegablePromoModal()">
+                        <option value="ninguna">Sin Promo</option>
+                        <option value="2da_unidad">2da Unidad</option>
+                        <option value="descuento_directo">Descuento Directo (%)</option>
+                        <option value="combos">Combos (Llevando X)</option>
+                        <option value="promo_cantidad">Promo por cantidad (Pagás X)</option>
+                    </select>
+                    <div id="contenedorDetallePromoModal" style="margin-top: 6px;">
+                        <select id="selectDetalle2daUnidad" style="font-size: 0.8rem; padding: 4px; display: none;">
+                            <option value="50">2do al 50%</option>
+                            <option value="70">2do al 70%</option>
+                            <option value="80">2do al 80%</option>
+                        </select>
+                        <input type="text" id="inputDetallePorcentaje" placeholder="Ej: 30 (%)" style="font-size: 0.8rem; padding: 4px; display: none; text-align: center;">
+                        <select id="selectDetalleCombos" style="font-size: 0.8rem; padding: 4px; display: none;">
+                            <option value="2x1">2x1</option>
+                            <option value="3x2">3x2</option>
+                            <option value="4x2">4x2</option>
+                            <option value="4x3">4x3</option>
+                        </select>
+                        <div id="contenedorDetalleCantidad" style="display: none; margin-top: 4px;">
+                            <select id="selectCantidadUnidades" style="font-size: 0.8rem; padding: 4px;" onchange="actualizarLabelPrecioModal()">
+                                <option value="2">2 unidades</option>
+                                <option value="3">3 unidades</option>
+                                <option value="4">4 unidades</option>
+                                <option value="6">6 unidades</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label id="contenedorCheckExclusivoPromo" class="checkbox-label" style="font-size: 0.75rem; margin-top: 6px; display: none;">
+                        <input type="checkbox" id="pcModalCheckExclusivoMiCarrefour">
+                        Exclusivo Mi Carrefour
+                    </label>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem;">Cant. Copias:</label>
+                    <input type="number" id="pcModalInputCopias" min="1" max="20" value="1" style="font-size: 0.85rem; padding: 4px; text-align: center;">
+                </div>
+            </div>
+
+            <div id="pcContenedorInputPrecio" style="margin-bottom: 15px; background: #f1f5f9; padding: 12px; border-radius: 8px;">
+                <label style="margin-bottom: 6px;">Ingresá el precio actual ($):</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="number" id="pcInputPrecio" step="0.01" style="font-size: 1.2rem; text-align: center; font-weight: bold;" onkeydown="siEsEnterAceptarPC(event)">
+                    <button class="btn-manual" style="background: #16a34a; padding: 10px 20px;" onclick="guardarYAvanzarPC()">Aceptar</button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <button id="btnAnteriorPC" class="btn-manual" style="background: #64748b; font-size: 0.85rem; padding: 8px 12px;" onclick="anteriorProductoPC()">⬅️ Anterior</button>
+                <button class="btn-danger" style="font-size: 0.85rem; padding: 8px 12px;" onclick="cerrarModalCargaPC()">🚪 Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const URL_CSV_CATALOGO = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/catalogo.csv';
+        const URL_MI_CARREFOUR_LOGO = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/micarrefour.jpg';
+        const URL_MI_CARREFOUR_LOGOBN = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/micarrefourblancoynegro.webp';
+
+        // --- MAPEO DE PLANTILLAS (COLOR vs BN / SIN FOTO) ---
+        const URL_PLANTILLA_MIERCOLES_COLOR = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_MiercolesPeroque.png';
+        const URL_PLANTILLA_MIERCOLES_BN = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_MiercolesPeroqueBN.png';
+
+        const URL_PLANTILLA_JUEVES_COLOR = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_JuevesPeroque.png';
+        const URL_PLANTILLA_JUEVES_BN = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_JuevesPeroqueBN.png';
+
+        const URL_PLANTILLA_VIERNES_COLOR = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_ViernesPeroque.png';
+        const URL_PLANTILLA_VIERNES_BN = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_ViernesPeroqueBN.png';
+
+        const URL_PLANTILLA_FINDE_COLOR = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_FindePeroque.png';
+        const URL_PLANTILLA_FINDE_BN = 'https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/Plantilla_FindePeroqueBN.png';
+
+        function obtenerUrlPlantilla(tipoDia) {
+            const esModoSinFoto = document.getElementById('checkModoSinFoto').checked;
+            if (tipoDia === 'jueves') {
+                return esModoSinFoto ? URL_PLANTILLA_JUEVES_BN : URL_PLANTILLA_JUEVES_COLOR;
+            } else if (tipoDia === 'viernes') {
+                return esModoSinFoto ? URL_PLANTILLA_VIERNES_BN : URL_PLANTILLA_VIERNES_COLOR;
+            } else if (tipoDia === 'sabadoDomingo' || tipoDia === 'finde') {
+                return esModoSinFoto ? URL_PLANTILLA_FINDE_BN : URL_PLANTILLA_FINDE_COLOR;
+            } else {
+                return esModoSinFoto ? URL_PLANTILLA_MIERCOLES_BN : URL_PLANTILLA_MIERCOLES_COLOR;
+            }
+        }
+
+        let catalogoProductos = {}; 
+        let listaCatalogoArreglo = [];
+        let productosAEscanear = []; 
+        let productosFavoritos = obtenerFavoritos();
+        let html5QrcodeScanner = null;
+        let escanerActivo = false;
+
+        let pcModo = 'individual'; 
+        let productoActualPC = null;
+        let pcIndiceActual = 0;
+        let seccionActiva = 'escaneo';
+        let indiceEdicionActual = null;
+
+        function formatearPrecio(valor) {
+            return Math.round(valor).toString();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarCatalogoDesdeURL();
+            recuperarListaGuardada();
+            renderizarFavoritosUI();
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-container')) {
+                    const busqueda = document.getElementById('listaResultadosBusqueda');
+                    const busquedaPC = document.getElementById('listaResultadosBusquedaPC');
+                    if (busqueda) busqueda.style.display = 'none';
+                    if (busquedaPC) busquedaPC.style.display = 'none';
+                }
+            });
+        });
+
+        function mostrarSeccion(seccion) {
+            seccionActiva = seccion;
+            const secEscaneo = document.getElementById('seccionEscaneo');
+            const secModoPC = document.getElementById('seccionModoPC');
+            const secFavoritos = document.getElementById('seccionFavoritos');
+
+            secEscaneo.style.display = 'none';
+            secModoPC.style.display = 'none';
+            secFavoritos.style.display = 'none';
+
+            if (seccion === 'favoritos') {
+                secFavoritos.style.display = 'block';
+                renderizarFavoritosUI();
+            } else if (seccion === 'modoPC') {
+                secModoPC.style.display = 'block';
+                actualizarListaUI();
+            } else {
+                secEscaneo.style.display = 'block';
+                actualizarListaUI();
+            }
+        }
+
+        function actualizarLabelPrecioModal() {
+            const tipo = document.getElementById('pcModalTipoPromo').value;
+            const labelPrecio = document.querySelector('#pcContenedorInputPrecio label');
+            if (!labelPrecio) return;
+
+            if (tipo === 'promo_cantidad') {
+                const cant = document.getElementById('selectCantidadUnidades')?.value || '2';
+                labelPrecio.innerText = `Ingresá el total a pagar por ${cant} unidades ($):`;
+            } else {
+                labelPrecio.innerText = `Ingresá el precio actual ($):`;
+            }
+        }
+
+        function actualizarDesplegablePromoModal() {
+            const tipo = document.getElementById('pcModalTipoPromo').value;
+            const sel2da = document.getElementById('selectDetalle2daUnidad');
+            const inpPct = document.getElementById('inputDetallePorcentaje');
+            const selCombos = document.getElementById('selectDetalleCombos');
+            const divCant = document.getElementById('contenedorDetalleCantidad');
+            const chkExclusivo = document.getElementById('contenedorCheckExclusivoPromo');
+
+            sel2da.style.display = 'none';
+            inpPct.style.display = 'none';
+            selCombos.style.display = 'none';
+            if (divCant) divCant.style.display = 'none';
+
+            if (tipo === '2da_unidad') {
+                sel2da.style.display = 'block';
+                chkExclusivo.style.display = 'flex';
+            } else if (tipo === 'descuento_directo') {
+                inpPct.style.display = 'block';
+                chkExclusivo.style.display = 'flex';
+            } else if (tipo === 'combos') {
+                selCombos.style.display = 'block';
+                chkExclusivo.style.display = 'flex';
+            } else if (tipo === 'promo_cantidad') {
+                if (divCant) divCant.style.display = 'block';
+                chkExclusivo.style.display = 'flex';
+            } else {
+                chkExclusivo.style.display = 'none';
+                document.getElementById('pcModalCheckExclusivoMiCarrefour').checked = false;
+            }
+
+            actualizarLabelPrecioModal();
+        }
+
+        function obtenerPromoObjDesdemodal() {
+            const tipo = document.getElementById('pcModalTipoPromo').value;
+            let codigoPromo = 'ninguna';
+
+            if (tipo === '2da_unidad') {
+                codigoPromo = document.getElementById('selectDetalle2daUnidad').value;
+            } else if (tipo === 'descuento_directo') {
+                const valorRaw = document.getElementById('inputDetallePorcentaje').value.trim();
+                if (valorRaw !== "" && !/^\d+(\.\d+)?$/.test(valorRaw)) {
+                    alert("⚠️ Ingresá solo números válidos para el porcentaje.");
+                    throw new Error("Porcentaje inválido");
+                }
+                const pct = parseFloat(valorRaw) || 0;
+                codigoPromo = pct > 0 ? `directo_${pct}` : 'ninguna';
+            } else if (tipo === 'combos') {
+                codigoPromo = document.getElementById('selectDetalleCombos').value;
+            } else if (tipo === 'promo_cantidad') {
+                const cant = document.getElementById('selectCantidadUnidades').value;
+                codigoPromo = `cantidad_${cant}`;
+            }
+
+            const esExclusivoPromo = document.getElementById('pcModalCheckExclusivoMiCarrefour').checked;
+            return {
+                tipoPromo: tipo,
+                promocionSegunda: codigoPromo,
+                promoExclusivaMiCarrefour: esExclusivoPromo
+            };
+        }
+
+        function cargarPromoEnModal(tipoPromo, promocionSegunda, promoExclusivaMiCarrefour = false) {
+            const selectTipo = document.getElementById('pcModalTipoPromo');
+            const sel2da = document.getElementById('selectDetalle2daUnidad');
+            const inpPct = document.getElementById('inputDetallePorcentaje');
+            const selCombos = document.getElementById('selectDetalleCombos');
+            const selCant = document.getElementById('selectCantidadUnidades');
+
+            const tipoReal = tipoPromo || (promocionSegunda && promocionSegunda.startsWith('directo_') ? 'descuento_directo' : 'ninguna');
+            selectTipo.value = tipoReal;
+            actualizarDesplegablePromoModal();
+
+            if (tipoReal === '2da_unidad') sel2da.value = promocionSegunda || '50';
+            else if (tipoReal === 'descuento_directo') inpPct.value = promocionSegunda ? promocionSegunda.replace('directo_', '') : '';
+            else if (tipoReal === 'combos') selCombos.value = promocionSegunda || '2x1';
+            else if (tipoReal === 'promo_cantidad') {
+                const cant = promocionSegunda ? promocionSegunda.replace('cantidad_', '') : '2';
+                if (selCant) selCant.value = cant;
+                actualizarLabelPrecioModal();
+            }
+
+            document.getElementById('pcModalCheckExclusivoMiCarrefour').checked = !!promoExclusivaMiCarrefour;
+        }
+
+        function obtenerEtiquetaPromoTexto(p) {
+            const promo = p.promocionSegunda;
+            if (!promo || promo === 'ninguna') return 'Sin Promo';
+            let texto = "";
+            if (promo === '50') texto = '2do 50%';
+            else if (promo === '70') texto = '2do 70%';
+            else if (promo === '80') texto = '2do 80%';
+            else if (promo.startsWith('directo_')) texto = `${promo.replace('directo_', '')}% DESC`;
+            else if (promo.startsWith('cantidad_')) texto = `Pagás ${promo.replace('cantidad_', '')} u.`;
+            else if (['2x1', '3x2', '4x2', '4x3'].includes(promo)) texto = promo;
+            else texto = promo;
+
+            if (p.promoExclusivaMiCarrefour) texto += " (Excl. Mi Carrefour)";
+            return texto;
+        }
+
+        function guardarListaEnStorage() {
+            try { localStorage.setItem('productosAEscanear', JSON.stringify(productosAEscanear)); } catch (e) {}
+        }
+
+        function recuperarListaGuardada() {
+            const datosGuardados = localStorage.getItem('productosAEscanear');
+            if (datosGuardados) {
+                try {
+                    productosAEscanear = JSON.parse(datosGuardados);
+                    actualizarListaUI();
+                } catch (e) {}
+            }
+        }
+
+        function vaciarListaCompleta() {
+            if (confirm("¿Querés borrar todos los productos escaneados?")) {
+                productosAEscanear = [];
+                localStorage.removeItem('productosAEscanear');
+                actualizarListaUI();
+                document.getElementById('previewGrid').innerHTML = '';
+            }
+        }
+
+        function mostrarOpcionFoto(tipo) {
+            document.getElementById('boxOpcionUrl').style.display = (tipo === 'url') ? 'block' : 'none';
+            document.getElementById('boxOpcionArchivo').style.display = (tipo === 'archivo') ? 'block' : 'none';
+        }
+
+        function procesarFotoLocal(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (productoActualPC) productoActualPC.fotoUrl = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function cargarCatalogoDesdeURL() {
+            const statusDiv = document.getElementById('statusCatalogo');
+            const selectCatalogo = document.getElementById('selectCatalogo');
+            const selectCatalogoPC = document.getElementById('selectCatalogoPC');
+
+            try {
+                const respuesta = await fetch(URL_CSV_CATALOGO);
+                if (!respuesta.ok) throw new Error("Error al conectar con GitHub");
+                const text = await respuesta.text();
+                const lineas = text.split('\n');
+                catalogoProductos = {};
+                listaCatalogoArreglo = [];
+
+                lineas.forEach((linea, idx) => {
+                    if (idx === 0 || !linea.trim()) return; 
+                    const cols = linea.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                    if (cols.length >= 2) {
+                        const ean = cols[0];
+                        const nombreProducto = cols[1] || "PRODUCTO";
+                        const itemObj = {
+                            ean: ean,
+                            producto: nombreProducto,
+                            fotoUrl: cols[4] || `https://raw.githubusercontent.com/OrellanoL/ProductosCatalogo/main/${ean}.webp`
+                        };
+                        catalogoProductos[ean] = itemObj;
+                        listaCatalogoArreglo.push(itemObj);
+                    }
+                });
+
+                listaCatalogoArreglo.sort((a, b) => a.producto.localeCompare(b.producto, 'es', { sensitivity: 'base' }));
+                const fragmento1 = document.createDocumentFragment();
+                const fragmento2 = document.createDocumentFragment();
+
+                fragmento1.appendChild(new Option("-- Buscar / Elegir producto de la lista --", ""));
+                fragmento2.appendChild(new Option("-- Buscar / Elegir producto de la lista --", ""));
+
+                listaCatalogoArreglo.forEach(item => {
+                    fragmento1.appendChild(new Option(`${item.producto} (${item.ean})`, item.ean));
+                    fragmento2.appendChild(new Option(`${item.producto} (${item.ean})`, item.ean));
+                });
+
+                selectCatalogo.innerHTML = ''; selectCatalogo.appendChild(fragmento1);
+                selectCatalogoPC.innerHTML = ''; selectCatalogoPC.appendChild(fragmento2);
+                statusDiv.innerHTML = `<span class="status-badge">✓ Catálogo online listo (${listaCatalogoArreglo.length} productos)</span>`;
+            } catch (error) {
+                statusDiv.innerHTML = `<span style="color:red; font-size:0.85rem;">⚠️ Error al conectar con GitHub.</span>`;
+            }
+        }
+
+        function filtrarProductosPorTexto(query, idContenedorResultados) {
+            const contenedorRes = document.getElementById(idContenedorResultados);
+            if (!query || query.trim().length < 2) {
+                contenedorRes.style.display = 'none';
+                return;
+            }
+            const termino = query.toLowerCase().trim();
+            const filtrados = listaCatalogoArreglo.filter(p => p.producto.toLowerCase().includes(termino)).slice(0, 10);
+            if (filtrados.length === 0) {
+                contenedorRes.style.display = 'none';
+                return;
+            }
+
+            const fragmentoResultados = document.createDocumentFragment();
+            filtrados.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.innerHTML = `<strong>${p.producto}</strong> <span style="color:#666; font-size:0.8rem;">(${p.ean})</span>`;
+                div.onclick = () => {
+                    contenedorRes.style.display = 'none';
+                    if (document.getElementById('inputBuscadorTexto')) document.getElementById('inputBuscadorTexto').value = '';
+                    if (document.getElementById('inputBuscadorTextoPC')) document.getElementById('inputBuscadorTextoPC').value = '';
+                    abrirModalCargaIndividualPC(p.ean);
+                };
+                fragmentoResultados.appendChild(div);
+            });
+
+            contenedorRes.innerHTML = '';
+            contenedorRes.appendChild(fragmentoResultados);
+            contenedorRes.style.display = 'block';
+        }
+
+        function seleccionarDesdeDesplegable(idSelect) {
+            const select = document.getElementById(idSelect);
+            if (select.value) {
+                abrirModalCargaIndividualPC(select.value);
+                select.value = "";
+            }
+        }
+
+        function alternarCamara() {
+            const readerDiv = document.getElementById("reader");
+            if (escanerActivo) { detenerCamara(); return; }
+            readerDiv.style.display = "block";
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                (text) => { detenerCamara(); abrirModalCargaIndividualPC(text.trim()); }
+            ).catch(err => {
+                alert("Error al abrir la cámara: " + err);
+                readerDiv.style.display = "none";
+            });
+            escanerActivo = true;
+        }
+
+        function detenerCamara() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById("reader").style.display = "none";
+                    escanerActivo = false;
+                    html5QrcodeScanner = null;
+                });
+            }
+        }
+
+        function buscarEanManual() {
+            const ean = document.getElementById('manualEanInput').value.trim();
+            if (ean) {
+                abrirModalCargaIndividualPC(ean);
+                document.getElementById('manualEanInput').value = '';
+            }
+        }
+
+        function esProductoFavorito(ean) {
+            return productosFavoritos.some(f => f.ean === ean);
+        }
+
+        function renderizarFilaItem(p, idx) {
+            if (!p.copias) p.copias = 1;
+            const esFav = esProductoFavorito(p.ean);
+            const promoTexto = obtenerEtiquetaPromoTexto(p);
+
+            return `
+                <div class="item-row">
+                    <div class="item-info">
+                        <strong>${p.producto}</strong>
+                        <span>EAN: ${p.ean}</span>
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" ${p.esMiCarrefour ? 'checked' : ''} onchange="productosAEscanear[${idx}].esMiCarrefour = this.checked; guardarListaEnStorage();">
+                        Mi Carrefour
+                    </label>
+                    <div style="font-size: 0.8rem; font-weight: bold; color: #0369a1; background: #e0f2fe; padding: 4px 8px; border-radius: 4px;">
+                        ${promoTexto}
+                    </div>
+                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                        $: <input type="number" step="0.01" class="item-price-input" value="${p.precioRegular}" onchange="productosAEscanear[${idx}].precioRegular = parseFloat(this.value) || 0; guardarListaEnStorage();">
+                    </label>
+                    <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                        Copias: <input type="number" min="1" max="20" class="item-copias-input" value="${p.copias}" onchange="productosAEscanear[${idx}].copias = parseInt(this.value) || 1; guardarListaEnStorage();">
+                    </label>
+                    <button type="button" class="btn-edit" onclick="abrirModalEdicionItem(${idx})">✏️ Editar</button>
+                    <button type="button" class="${esFav ? 'btn-fav-active' : 'btn-fav'}" onclick="${esFav ? '' : `guardarComoFavorito(${idx})`}">
+                        ${esFav ? '★ Favorito' : '☆ Favorito'}
+                    </button>
+                    <button class="btn-danger" onclick="eliminarProducto(${idx})">✕</button>
+                </div>
+            `;
+        }
+
+        function actualizarListaUI() {
+            document.getElementById('cantProductos').innerText = productosAEscanear.length;
+            document.getElementById('cantProductosPC').innerText = productosAEscanear.length;
+            let html = '';
+            productosAEscanear.forEach((p, idx) => { html += renderizarFilaItem(p, idx); });
+            document.getElementById('listaEscaneados').innerHTML = html;
+            document.getElementById('listaEscaneadosPC').innerHTML = html;
+        }
+
+        function guardarComoFavorito(index) {
+            const prod = productosAEscanear[index];
+            if (esProductoFavorito(prod.ean)) return;
+            productosFavoritos.push({ ...prod });
+            if (guardarFavoritosStorage()) {
+                actualizarListaUI();
+                renderizarFavoritosUI();
+            } else {
+                productosFavoritos.pop();
+            }
+        }
+
+        function renderizarFavoritosUI() {
+            const contenedor = document.getElementById('contenedorListaFavoritos');
+            if (!contenedor) return;
+            if (productosFavoritos.length === 0) {
+                contenedor.innerHTML = '<p style="color: #666; font-style: italic;">No tienes favoritos guardados.</p>';
+                return;
+            }
+            let html = '';
+            productosFavoritos.forEach((p, idx) => {
+                if (!p.copias) p.copias = 1;
+                const promoTexto = obtenerEtiquetaPromoTexto(p);
+                html += `
+                    <div class="item-row" style="background: #ffffff; margin-bottom: 8px;">
+                        <div class="item-info">
+                            <strong>${p.producto}</strong>
+                            <span>EAN: ${p.ean}</span>
+                        </div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" ${p.esMiCarrefour ? 'checked' : ''} onchange="productosFavoritos[${idx}].esMiCarrefour = this.checked; guardarFavoritosStorage();">
+                            Mi Carrefour
+                        </label>
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #b45309; background: #fef3c7; padding: 4px 8px; border-radius: 4px;">
+                            ${promoTexto}
+                        </div>
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+                            Precio $: <input type="number" step="0.01" class="item-price-input" value="${p.precioRegular}" onchange="actualizarPrecioFavorito(${idx}, this.value)">
+                        </label>
+                        <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
+                            Copias: <input type="number" min="1" max="20" class="item-copias-input" value="${p.copias}" onchange="actualizarCopiasFavorito(${idx}, this.value)">
+                        </label>
+                        <button class="btn-danger" onclick="eliminarFavorito(${idx})">✕</button>
+                    </div>
+                `;
+            });
+            contenedor.innerHTML = html;
+        }
+
+        function guardarFavoritos(favoritos) {
+            try { localStorage.setItem('productosFavoritos', JSON.stringify(favoritos)); return true; } catch (e) { return false; }
+        }
+
+        function guardarFavoritosStorage() { return guardarFavoritos(productosFavoritos); }
+        function obtenerFavoritos() {
+            try { const data = localStorage.getItem('productosFavoritos'); return data ? JSON.parse(data) : []; } catch (e) { return []; }
+        }
+
+        function actualizarPrecioFavorito(index, val) { productosFavoritos[index].precioRegular = parseFloat(val) || 0; guardarFavoritosStorage(); }
+        function actualizarCopiasFavorito(index, val) { productosFavoritos[index].copias = parseInt(val) || 1; guardarFavoritosStorage(); }
+        function eliminarFavorito(index) { productosFavoritos.splice(index, 1); guardarFavoritosStorage(); renderizarFavoritosUI(); actualizarListaUI(); }
+        function eliminarProducto(idx) { productosAEscanear.splice(idx, 1); guardarListaEnStorage(); actualizarListaUI(); }
+
+        async function abrirModalCargaIndividualPC(ean) {
+            pcModo = 'individual';
+            indiceEdicionActual = null;
+            document.getElementById('btnAnteriorPC').style.display = 'none';
+
+            let prodBase = catalogoProductos[ean];
+            const boxFotoManual = document.getElementById('contenedorImagenManual');
+            const inputUrl = document.getElementById('pcInputUrlFotoManual');
+            const btnWeb = document.getElementById('btnNavegarCarrefour');
+
+            if (!prodBase) {
+                const nombreManual = prompt(`⚠️ El EAN ${ean} no existe en el catálogo.\n\nIngresá el nombre del producto:`);
+                if (!nombreManual) return;
+                boxFotoManual.style.display = 'block';
+                inputUrl.value = '';
+                mostrarOpcionFoto('url');
+                btnWeb.onclick = () => window.open(`https://www.carrefour.com.ar/${encodeURIComponent(ean || nombreManual)}`, '_blank');
+                prodBase = { ean: ean, producto: nombreManual.toUpperCase(), fotoUrl: null };
+            } else {
+                boxFotoManual.style.display = 'none';
+            }
+
+            productoActualPC = {
+                ...prodBase,
+                precioRegular: 0,
+                esMiCarrefour: false,
+                tipoPromo: 'ninguna',
+                promocionSegunda: 'ninguna',
+                promoExclusivaMiCarrefour: false,
+                copias: 1
+            };
+
+            document.getElementById('pcModalProgreso').innerText = "Añadir Producto";
+            document.getElementById('pcModalNombreProd').innerText = productoActualPC.producto;
+            document.getElementById('pcModalEan').innerText = `EAN: ${productoActualPC.ean}`;
+            document.getElementById('pcModalBarcodeImg').src = `https://barcodeapi.org/api/128/${encodeURIComponent(productoActualPC.ean)}`;
+
+            document.getElementById('pcModalCheckMiCarrefour').checked = false;
+            cargarPromoEnModal('ninguna', 'ninguna', false);
+            document.getElementById('pcModalInputCopias').value = 1;
+            document.getElementById('pcInputPrecio').value = '';
+            document.getElementById('modalCargaPC').style.display = 'flex';
+            setTimeout(() => document.getElementById('pcInputPrecio').focus(), 100);
+        }
+
+        function abrirModalEdicionItem(idx) {
+            const p = productosAEscanear[idx];
+            pcModo = 'individual';
+            indiceEdicionActual = idx;
+            document.getElementById('btnAnteriorPC').style.display = 'none';
+            productoActualPC = { ...p };
+
+            document.getElementById('pcModalProgreso').innerText = `Editando (${idx + 1})`;
+            document.getElementById('pcModalNombreProd').innerText = productoActualPC.producto;
+            document.getElementById('pcModalEan').innerText = `EAN: ${productoActualPC.ean}`;
+            document.getElementById('pcModalBarcodeImg').src = `https://barcodeapi.org/api/128/${encodeURIComponent(productoActualPC.ean)}`;
+
+            document.getElementById('pcModalCheckMiCarrefour').checked = !!productoActualPC.esMiCarrefour;
+            cargarPromoEnModal(productoActualPC.tipoPromo, productoActualPC.promocionSegunda, productoActualPC.promoExclusivaMiCarrefour);
+            document.getElementById('pcModalInputCopias').value = productoActualPC.copias || 1;
+            document.getElementById('pcInputPrecio').value = productoActualPC.precioRegular || '';
+            document.getElementById('modalCargaPC').style.display = 'flex';
+            setTimeout(() => { const i = document.getElementById('pcInputPrecio'); i.focus(); i.select(); }, 100);
+        }
+
+        function iniciarCargaPreciosPC() {
+            if (!productosFavoritos || productosFavoritos.length === 0) {
+                alert("No tenés productos favoritos guardados.");
+                return;
+            }
+            pcModo = 'masivo';
+            indiceEdicionActual = null;
+            pcIndiceActual = 0;
+            document.getElementById('btnAnteriorPC').style.display = 'inline-block';
+            document.getElementById('modalCargaPC').style.display = 'flex';
+            cargarProductoModalMasivoPC();
+        }
+
+        function cargarProductoModalMasivoPC() {
+            if (pcIndiceActual >= productosFavoritos.length) {
+                alert("🎉 ¡Completaste la carga de favoritos!");
+                cerrarModalCargaPC();
+                return;
+            }
+            const p = productosFavoritos[pcIndiceActual];
+            document.getElementById('pcModalProgreso').innerText = `Producto ${pcIndiceActual + 1} de ${productosFavoritos.length}`;
+            document.getElementById('pcModalNombreProd').innerText = p.producto;
+            document.getElementById('pcModalEan').innerText = `EAN: ${p.ean}`;
+            document.getElementById('pcModalBarcodeImg').src = `https://barcodeapi.org/api/128/${encodeURIComponent(p.ean)}`;
+
+            document.getElementById('pcModalCheckMiCarrefour').checked = !!p.esMiCarrefour;
+            cargarPromoEnModal(p.tipoPromo, p.promocionSegunda, p.promoExclusivaMiCarrefour);
+            document.getElementById('pcModalInputCopias').value = p.copias || 1;
+            document.getElementById('pcInputPrecio').value = p.precioRegular !== undefined ? p.precioRegular : '';
+            setTimeout(() => { const i = document.getElementById('pcInputPrecio'); i.focus(); i.select(); }, 100);
+        }
+
+        function siEsEnterAceptarPC(e) { if (e.key === 'Enter') { e.preventDefault(); guardarYAvanzarPC(); } }
+
+        function guardarYAvanzarPC() {
+            let promoObj;
+            try { promoObj = obtenerPromoObjDesdemodal(); } catch (err) { return; }
+
+            const inputUrlFoto = document.getElementById('pcInputUrlFotoManual');
+            if (inputUrlFoto && inputUrlFoto.value.trim() !== '') productoActualPC.fotoUrl = inputUrlFoto.value.trim();
+
+            const precioVal = parseFloat(document.getElementById('pcInputPrecio').value) || 0;
+            const esMiCarrefourVal = document.getElementById('pcModalCheckMiCarrefour').checked;
+            const copiasVal = parseInt(document.getElementById('pcModalInputCopias').value) || 1;
+
+            if (pcModo === 'individual') {
+                productoActualPC.precioRegular = precioVal;
+                productoActualPC.esMiCarrefour = esMiCarrefourVal;
+                productoActualPC.tipoPromo = promoObj.tipoPromo;
+                productoActualPC.promocionSegunda = promoObj.promocionSegunda;
+                productoActualPC.promoExclusivaMiCarrefour = promoObj.promoExclusivaMiCarrefour;
+                productoActualPC.copias = copiasVal;
+
+                if (indiceEdicionActual !== null) productosAEscanear[indiceEdicionActual] = productoActualPC;
+                else productosAEscanear.push(productoActualPC);
+
+                guardarListaEnStorage();
+                actualizarListaUI();
+                cerrarModalCargaPC();
+            } else {
+                productosFavoritos[pcIndiceActual].precioRegular = precioVal;
+                productosFavoritos[pcIndiceActual].esMiCarrefour = esMiCarrefourVal;
+                productosFavoritos[pcIndiceActual].tipoPromo = promoObj.tipoPromo;
+                productosFavoritos[pcIndiceActual].promocionSegunda = promoObj.promocionSegunda;
+                productosFavoritos[pcIndiceActual].promoExclusivaMiCarrefour = promoObj.promoExclusivaMiCarrefour;
+                productosFavoritos[pcIndiceActual].copias = copiasVal;
+
+                guardarFavoritosStorage();
+                pcIndiceActual++;
+                cargarProductoModalMasivoPC();
+            }
+        }
+
+        function anteriorProductoPC() {
+            if (pcModo === 'masivo' && pcIndiceActual > 0) {
+                pcIndiceActual--;
+                cargarProductoModalMasivoPC();
+            }
+        }
+
+        function cerrarModalCargaPC() {
+            document.getElementById('modalCargaPC').style.display = 'none';
+            indiceEdicionActual = null;
+            if (pcModo === 'masivo') renderizarFavoritosUI();
+        }
+
+        function cargarImagen(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
+            });
+        }
+        
+        function dibujarCuadroPrecio(ctx, x, y, ancho, alto, precioFinalNum, pData, imgMiCarrefour, tipoDia = 'miercoles') {
+            const textoPrecio = formatearPrecio(precioFinalNum);
+            const esMiCarrefour = pData.esMiCarrefour;
+            const promo = pData.promocionSegunda;
+            const tienePromo = promo && promo !== 'ninguna';
+            const centroX = x + (ancho / 2);
+
+            // --- DISEÑO PROMOCIÓN SEGUNDA UNIDAD (Recuadro independiente + Total por 2 unidades a la der.) ---
+            if (tienePromo && ['50', '70', '80'].includes(promo)) {
+                ctx.save();
+
+                const anchoTotal = 620;
+                const altoBoxPromo = 160;
+                const xInicio = centroX - (anchoTotal / 2);
+                const anchoMitad = anchoTotal / 2;
+                const xDerecha = xInicio + anchoMitad;
+                const centroIzq = xInicio - 25 + ((anchoMitad - 10) / 2);
+
+                // TEXTO SUPERIOR: "PROMO ACUMULABLE" (alineado al centro del recuadro)
+                ctx.fillStyle = "#000000";
+                ctx.font = "900 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("PROMO ACUMULABLE", centroIzq, y);
+
+                // 1. DIBUJAR RECUADRO INDEPENDIENTE SOLO PARA LA PROMO (4 esquinas redondeadas iguales)
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.roundRect(xInicio - 25, y + 10, anchoMitad - 10, altoBoxPromo, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // --- BLOQUE IZQUIERDO (DENTRO DEL RECUADRO): PORCENTAJE ---
+                ctx.fillStyle = "#000000";
+                ctx.font = "900 11px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("LLEVANDO 2 PRODUCTOS IGUALES", centroIzq, y + 35);
+
+                const textoPorcentaje = promo + "%";
+                ctx.font = `900 75px 'Impact', 'Arial Black', sans-serif`;
+                ctx.fillText(textoPorcentaje, centroIzq, y + 118);
+
+                ctx.font = "900 12px sans-serif";
+                ctx.fillText("EN LA 2DA UNIDAD", centroIzq, y + 143);
+
+                // TEXTO INFERIOR: "EXCLUSIVO MI CARREFOUR" (solo si está tildado)
+                if (pData.promoExclusivaMiCarrefour) {
+                    ctx.font = "900 14px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("EXCLUSIVO MI CARREFOUR", centroIzq, y + 10 + altoBoxPromo + 22);
+                }
+
+                // --- BLOQUE DERECHO (AFUERA DEL RECUADRO): TOTAL POR 2 UNIDADES ---
+                const precioTotalDosUnidades = formatearPrecio(precioFinalNum * 2);
+                const centroDer = xDerecha + (anchoMitad / 2) + 10;
+
+                let tamanoTotal = 115;
+                if (precioTotalDosUnidades.length >= 5) tamanoTotal = 95;
+                if (precioTotalDosUnidades.length >= 6) tamanoTotal = 80;
+
+                ctx.font = `900 ${tamanoTotal}px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + precioTotalDosUnidades, centroDer, y + (altoBoxPromo / 2) - 8);
+
+                // Aclaración principal: total por 2 unidades
+                ctx.font = "900 13px sans-serif";
+                ctx.textBaseline = "alphabetic";
+                ctx.fillText("TOTAL POR 2 UNIDADES", centroDer, y + altoBoxPromo + 4);
+
+                // Aclaración secundaria: precio unitario promedio llevando las 2 unidades
+                ctx.font = "bold 11px sans-serif";
+                ctx.fillText(`($${textoPrecio} c/u)`, centroDer, y + altoBoxPromo + 20);
+
+                ctx.restore();
+                return;
+            }
+
+            // --- DISEÑO PROMOCIÓN COMBOS (2x1, 3x2, 4x2, 4x3, etc.) ---
+            const esCombo = tienePromo && (
+                ['2x1', '3x2', '4x2', '4x3'].includes(promo) ||
+                pData.tipoPromo === 'combos'
+            );
+
+            if (esCombo) {
+                ctx.save();
+
+                const anchoTotal = 620;
+                const altoBoxPromo = 160;
+                const xInicio = centroX - (anchoTotal / 2);
+                const anchoMitad = anchoTotal / 2;
+                const xDerecha = xInicio + anchoMitad;
+                const centroIzq = xInicio - 25 + ((anchoMitad - 10) / 2);
+
+                const textoCombo = (promo || "").toUpperCase();
+                const partesCombo = textoCombo.split('X');
+                const cantLleva = partesCombo[0] || "";
+                const numLleva = parseInt(cantLleva, 10) || 1;
+
+                // TEXTO SUPERIOR: "PROMO ACUMULABLE"
+                ctx.fillStyle = "#000000";
+                ctx.font = "900 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("PROMO ACUMULABLE", centroIzq, y);
+
+                // 1. DIBUJAR RECUADRO INDEPENDIENTE SOLO PARA EL COMBO
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.roundRect(xInicio - 25, y + 10, anchoMitad - 10, altoBoxPromo, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // --- BLOQUE IZQUIERDO (DENTRO DEL RECUADRO): SOLO EL COMBO CENTRADO ---
+                ctx.fillStyle = "#000000";
+                ctx.font = `900 120px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(textoCombo, centroIzq, y + 10 + (altoBoxPromo / 2) + 4);
+                ctx.textBaseline = "alphabetic";
+
+                // TEXTO INFERIOR: "EXCLUSIVO MI CARREFOUR" (solo si está tildado)
+                if (pData.promoExclusivaMiCarrefour) {
+                    ctx.font = "900 14px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("EXCLUSIVO MI CARREFOUR", centroIzq, y + 10 + altoBoxPromo + 22);
+                }
+
+                // --- BLOQUE DERECHO (AFUERA DEL RECUADRO): TOTAL POR UNIDADES DEL COMBO ---
+                const precioTotalCombo = formatearPrecio(precioFinalNum * numLleva);
+                const centroDer = xDerecha + (anchoMitad / 2) + 10;
+
+                let tamanoTotal = 115;
+                if (precioTotalCombo.length >= 5) tamanoTotal = 95;
+                if (precioTotalCombo.length >= 6) tamanoTotal = 80;
+
+                ctx.font = `900 ${tamanoTotal}px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + precioTotalCombo, centroDer, y + (altoBoxPromo / 2) - 8);
+
+                // Aclaración principal: total por cuántas unidades
+                ctx.font = "900 13px sans-serif";
+                ctx.textBaseline = "alphabetic";
+                ctx.fillText(`TOTAL POR ${cantLleva} UNIDADES`, centroDer, y + altoBoxPromo + 4);
+
+                // Aclaración secundaria: precio unitario de referencia llevando el combo
+                ctx.font = "bold 11px sans-serif";
+                ctx.fillText(`($${textoPrecio} c/u)`, centroDer, y + altoBoxPromo + 20);
+
+                ctx.restore();
+                return;
+            }
+
+            // --- DISEÑO PROMOCIÓN DESCUENTO DIRECTO (directo_XX) ---
+            const esDescuentoDirecto = tienePromo && (
+                promo.startsWith('directo_') ||
+                pData.tipoPromo === 'descuento_directo'
+            );
+
+            if (esDescuentoDirecto) {
+                ctx.save();
+
+                const anchoTotal = 620;
+                const altoBoxPromo = 160;
+                const xInicio = centroX - (anchoTotal / 2);
+                const anchoMitad = anchoTotal / 2;
+                const xDerecha = xInicio + anchoMitad;
+                const centroIzq = xInicio - 25 + ((anchoMitad - 10) / 2);
+
+                const pctValor = promo.replace('directo_', '').trim();
+                const textoPorcentaje = `${pctValor}%`;
+
+                // TEXTO SUPERIOR: "PROMO ACUMULABLE"
+                ctx.fillStyle = "#000000";
+                ctx.font = "900 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("PROMO ACUMULABLE", centroIzq, y);
+
+                // 1. DIBUJAR RECUADRO INDEPENDIENTE SOLO PARA EL DESCUENTO
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.roundRect(xInicio - 25, y + 10, anchoMitad - 10, altoBoxPromo, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // --- BLOQUE IZQUIERDO (DENTRO DEL RECUADRO): % NÚMERO + DESCUENTO ---
+                ctx.fillStyle = "#000000";
+                ctx.textAlign = "center";
+                ctx.font = `900 85px 'Impact', 'Arial Black', sans-serif`;
+                ctx.fillText(textoPorcentaje, centroIzq, y + 105);
+
+                ctx.font = "900 20px sans-serif";
+                ctx.fillText("DESCUENTO", centroIzq, y + 140);
+
+                // TEXTO INFERIOR: "EXCLUSIVO MI CARREFOUR" (solo si está tildado)
+                if (pData.promoExclusivaMiCarrefour) {
+                    ctx.font = "900 14px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("EXCLUSIVO MI CARREFOUR", centroIzq, y + 10 + altoBoxPromo + 22);
+                }
+
+                // --- BLOQUE DERECHO (AFUERA DEL RECUADRO): PRECIO FINAL C/U ---
+                ctx.font = `900 130px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + textoPrecio, xDerecha + (anchoMitad / 2), y + (altoBoxPromo / 2) + 5);
+
+                ctx.restore();
+                return;
+            }
+
+            // --- DISEÑO PROMOCIÓN POR CANTIDAD ("PAGÁS LAS X UNIDADES") ---
+            const esPromoCantidad = tienePromo && (
+                promo.startsWith('cantidad_') ||
+                pData.tipoPromo === 'promo_cantidad'
+            );
+
+            if (esPromoCantidad) {
+                ctx.save();
+
+                const anchoTotal = 620;
+                const altoBoxPromo = 160;
+                const xInicio = centroX - (anchoTotal / 2);
+                const anchoMitad = anchoTotal / 2;
+                const xDerecha = xInicio + anchoMitad;
+                const centroIzq = xInicio - 25 + ((anchoMitad - 10) / 2);
+
+                const cantUnidades = promo.replace('cantidad_', '').trim() || "2";
+
+                // TEXTO SUPERIOR: "PROMO ACUMULABLE"
+                ctx.fillStyle = "#000000";
+                ctx.font = "900 16px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText("PROMO ACUMULABLE", centroIzq, y);
+
+                // 1. DIBUJAR RECUADRO INDEPENDIENTE SOLO PARA LA PROMO
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.roundRect(xInicio - 25, y + 10, anchoMitad - 10, altoBoxPromo, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // --- BLOQUE IZQUIERDO (DENTRO DEL RECUADRO): "PAGÁS LAS X UNIDADES" ---
+                ctx.fillStyle = "#000000";
+                ctx.textAlign = "center";
+                if (cantUnidades === "1") {
+                    ctx.font = "900 22px sans-serif";
+                    ctx.fillText("PAGÁS", centroIzq, y + 62);
+                    ctx.font = "900 32px sans-serif";
+                    ctx.fillText("1 UNIDAD", centroIzq, y + 106);
+                } else {
+                    ctx.font = "900 30px sans-serif";
+                    ctx.fillText("PAGÁS", centroIzq, y + 58);
+                    ctx.font = "900 30px sans-serif";
+                    ctx.fillText(`LAS ${cantUnidades}`, centroIzq, y + 92);
+                    ctx.font = "900 30px sans-serif";
+                    ctx.fillText("UNIDADES", centroIzq, y + 128);
+                }
+
+                // TEXTO INFERIOR: "EXCLUSIVO MI CARREFOUR" (solo si está tildado)
+                if (pData.promoExclusivaMiCarrefour) {
+                    ctx.font = "900 14px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("EXCLUSIVO MI CARREFOUR", centroIzq, y + 10 + altoBoxPromo + 22);
+                }
+
+                // --- BLOQUE DERECHO (AFUERA DEL RECUADRO): PRECIO TOTAL POR LAS X UNIDADES ---
+                // --- BLOQUE DERECHO (AFUERA DEL RECUADRO): PRECIO TOTAL POR LAS X UNIDADES (CON DESCUENTO DEL DÍA) ---
+                const montoPack = precioFinalNum;
+                const textoTotalPack = formatearPrecio(montoPack);
+                const centroDer = xDerecha + (anchoMitad / 2) + 10;
+                let tamanoTotal = 115;
+                if (textoTotalPack.length >= 5) tamanoTotal = 95;
+                if (textoTotalPack.length >= 6) tamanoTotal = 80;
+
+                ctx.font = `900 ${tamanoTotal}px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + textoTotalPack, centroDer, y + (altoBoxPromo / 2) - 4);
+
+                
+
+                ctx.restore();
+                return; 
+            }
+
+            // --- DISEÑO MI CARREFOUR (Con barra lateral y soporte para imagen color o BN) ---
+            if (esMiCarrefour) {
+                const esModoBN = document.getElementById('checkModoSinFoto').checked;
+                const colorFondoBarra = esModoBN ? "#000000" : "#5d2e7a";
+                
+                const anchoBarraLogo = Math.round(ancho * 0.32);
+                const anchoCajaBlanca = ancho - anchoBarraLogo;
+
+                ctx.save();
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.roundRect(x, y, ancho, alto, 16);
+                ctx.fill();
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, anchoBarraLogo, alto, [16, 0, 0, 16]);
+                ctx.clip();
+                ctx.fillStyle = colorFondoBarra;
+                ctx.fillRect(x, y, anchoBarraLogo, alto);
+                ctx.restore();
+
+                ctx.beginPath();
+                ctx.moveTo(x + anchoBarraLogo, y);
+                ctx.lineTo(x + anchoBarraLogo, y + alto);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = "#000000";
+                ctx.stroke();
+
+                if (imgMiCarrefour) {
+                    const margin = 12;
+                    const maxW = anchoBarraLogo - margin;
+                    const maxH = alto - margin;
+                    let scale = Math.min(maxW / imgMiCarrefour.width, maxH / imgMiCarrefour.height);
+                    let w = imgMiCarrefour.width * scale;
+                    let h = imgMiCarrefour.height * scale;
+                    ctx.drawImage(imgMiCarrefour, x + (anchoBarraLogo - w) / 2, y + (alto - h) / 2, w, h);
+                }
+
+                ctx.fillStyle = "#000000";
+                let fontSize = 120;
+                if (textoPrecio.length > 5) fontSize = 95;
+                ctx.font = `900 ${fontSize}px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + textoPrecio, x + anchoBarraLogo + (anchoCajaBlanca / 2), y + (alto / 2));
+                ctx.restore();
+
+            } else {
+                // --- DISEÑO NORMAL (Limpio y perfectamente centrado) ---
+                ctx.save();
+                ctx.fillStyle = "#000000";
+                let fontSizeNumero = 190;
+                if (textoPrecio.length > 5) fontSizeNumero = 140;
+                if (textoPrecio.length > 7) fontSizeNumero = 110;
+
+                ctx.font = `900 ${fontSizeNumero}px 'Impact', 'Arial Black', sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("$" + textoPrecio, x + (ancho / 2), y + (alto / 2));
+                ctx.restore();
+            }
+        }
+
+        async function dibujarContenidoEstiloGondola(ctx, canvas, pData, imgMiCarrefour, pctDescuento, tipoDia) {
+            const anchoCanvas = canvas.width;
+            const centroX = anchoCanvas / 2;
+
+            // 1. NOMBRE DEL PRODUCTO
+            ctx.fillStyle = "#000000";
+            ctx.textAlign = "center";
+            ctx.font = "900 28px sans-serif";
+
+            const textoMayus = (pData.producto || "").toUpperCase();
+            const palabras = textoMayus.split(" ");
+            const anchoMaximoTitulo = anchoCanvas - 140;
+            let lineas = [];
+            let lineaActual = "";
+
+            for (let n = 0; n < palabras.length; n++) {
+                let testLinea = lineaActual + palabras[n] + " ";
+                if (ctx.measureText(testLinea).width > anchoMaximoTitulo && n > 0) {
+                    lineas.push(lineaActual.trim());
+                    lineaActual = palabras[n] + " ";
+                } else {
+                    lineaActual = testLinea;
+                }
+            }
+            lineas.push(lineaActual.trim());
+
+            // Balancear si quedó en 2 líneas desparejas (evita palabras sueltas como "1 KG")
+            if (lineas.length === 2 && palabras.length >= 3) {
+                let mejorCorte = -1;
+                let menorDiferencia = Infinity;
+
+                for (let i = 1; i < palabras.length; i++) {
+                    const l1 = palabras.slice(0, i).join(" ");
+                    const l2 = palabras.slice(i).join(" ");
+                    const w1 = ctx.measureText(l1).width;
+                    const w2 = ctx.measureText(l2).width;
+
+                    if (w1 <= anchoMaximoTitulo && w2 <= anchoMaximoTitulo) {
+                        const diff = Math.abs(w1 - w2);
+                        if (diff < menorDiferencia) {
+                            menorDiferencia = diff;
+                            mejorCorte = i;
+                        }
+                    }
+                }
+
+                if (mejorCorte !== -1) {
+                    lineas = [
+                        palabras.slice(0, mejorCorte).join(" "),
+                        palabras.slice(mejorCorte).join(" ")
+                    ];
+                }
+            }
+
+            let yActual = 250; 
+            let alturaLinea = 34;
+            lineas.forEach(l => {
+                ctx.fillText(l, centroX, yActual);
+                yActual += alturaLinea;
+            });
+
+            yActual += 40;
+            // 2. CAJA DE PRECIO
+            const precioFinalNum = calcularPrecioFinal(pData, pctDescuento);
+            const anchoBox = pData.esMiCarrefour ? 620 : 480;
+            const altoBox = pData.esMiCarrefour ? 160 : 130;
+            
+            const xBox = centroX - (anchoBox / 2);
+            let yBox = 390;
+
+            let imgLogoMiCarf = imgMiCarrefour;
+            if (!imgLogoMiCarf && pData.esMiCarrefour) {
+                const esModoBN = document.getElementById('checkModoSinFoto').checked;
+                const urlLogoMiCarrefour = esModoBN ? URL_MI_CARREFOUR_LOGOBN : URL_MI_CARREFOUR_LOGO;
+                imgLogoMiCarf = await cargarImagen(urlLogoMiCarrefour);
+            }
+
+            dibujarCuadroPrecio(ctx, xBox, yBox, anchoBox, altoBox, precioFinalNum, pData, imgLogoMiCarf, tipoDia);
+
+            // 3. FRANJA INFERIOR (Código de barras y Desglose de IVA exacto / 1.21)
+            let yPie = 680;
+
+            const imgBarcode = await cargarImagen(`https://barcodeapi.org/api/128/${encodeURIComponent(pData.ean)}`);
+            if (imgBarcode) {
+                ctx.drawImage(imgBarcode, 170, yPie, 240, 70);
+            }
+            
+            const xDesglose = anchoCanvas - 430;
+            const wDesglose = 300;
+            const hDesglose = 80;
+
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(xDesglose, yPie - 5, wDesglose, hDesglose, 8);
+            ctx.stroke();
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 11px sans-serif";
+            ctx.textAlign = "right";
+            
+            let yTextoDesglose = yPie + 18;
+            yTextoDesglose += 20;
+            ctx.fillText(`PRECIO NORMAL: $${formatearPrecio(pData.precioRegular)}`, xDesglose + wDesglose - 12, yTextoDesglose);
+            
+            yTextoDesglose += 20;
+            ctx.font = "10px sans-serif";
+            const precioSinIVA = pData.precioRegular / 1.21;
+            ctx.fillText(`PRECIO SIN IMPUESTOS NACIONALES: $${formatearPrecio(precioSinIVA)}`, xDesglose + wDesglose - 12, yTextoDesglose);
+        }
+            
+        function calcularPrecioFinal(pData, pctDia) {
+            let base = pData.precioRegular;
+            const promo = pData.promocionSegunda;
+
+            if (promo === '50') base = base * 0.75; 
+            else if (promo === '70') base = base * 0.65; 
+            else if (promo === '80') base = base * 0.60;
+            else if (promo && promo.startsWith('directo_')) {
+                const pctDirecto = parseFloat(promo.replace('directo_', '')) || 0;
+                base = base * (1 - (pctDirecto / 100));
+            }
+            else if (promo === '2x1') base = base * 0.50;
+            else if (promo === '3x2') base = base * (2 / 3);
+            else if (promo === '4x2') base = base * 0.50;
+            else if (promo === '4x3') base = base * (3 / 4);
+
+            return base * (1 - pctDia / 100);
+        }
+
+        // --- CREADORES DE CARTELES CON SOPORTE INTELIGENTE DE PLANTILLAS BN ---
+        async function crearCartelMiercoles(pData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900; canvas.height = 850;
+            const ctx = canvas.getContext('2d');
+
+            const urlPlantilla = obtenerUrlPlantilla('miercoles');
+            const imgPlantilla = await cargarImagen(urlPlantilla);
+            if (imgPlantilla) ctx.drawImage(imgPlantilla, 0, 0, canvas.width, canvas.height);
+
+            await dibujarContenidoEstiloGondola(ctx, canvas, pData, null, 10, 'miercoles');
+            return canvas.toDataURL('image/png');
+        }
+
+        async function crearCartelJueves(pData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900; canvas.height = 850;
+            const ctx = canvas.getContext('2d');
+
+            const urlPlantilla = obtenerUrlPlantilla('jueves');
+            const imgPlantilla = await cargarImagen(urlPlantilla);
+            if (imgPlantilla) ctx.drawImage(imgPlantilla, 0, 0, canvas.width, canvas.height);
+
+            await dibujarContenidoEstiloGondola(ctx, canvas, pData, null, 15, 'jueves');
+            return canvas.toDataURL('image/png');
+        }
+
+        async function crearCartelViernes(pData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900; canvas.height = 850;
+            const ctx = canvas.getContext('2d');
+
+            const urlPlantilla = obtenerUrlPlantilla('viernes');
+            const imgPlantilla = await cargarImagen(urlPlantilla);
+            if (imgPlantilla) ctx.drawImage(imgPlantilla, 0, 0, canvas.width, canvas.height);
+
+            await dibujarContenidoEstiloGondola(ctx, canvas, pData, null, 15, 'viernes');
+            return canvas.toDataURL('image/png');
+        }
+
+        async function crearCartelFinDeSemana(pData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900; canvas.height = 850;
+            const ctx = canvas.getContext('2d');
+
+            const urlPlantilla = obtenerUrlPlantilla('sabadoDomingo');
+            const imgPlantilla = await cargarImagen(urlPlantilla);
+            if (imgPlantilla) ctx.drawImage(imgPlantilla, 0, 0, canvas.width, canvas.height);
+
+            await dibujarContenidoEstiloGondola(ctx, canvas, pData, null, 10, 'finde');
+            return canvas.toDataURL('image/png');
+        }
+
+        async function generarCartelesDeLista(listaOrigen) {
+            if (!listaOrigen || listaOrigen.length === 0) {
+                alert("La lista no tiene productos.");
+                return;
+            }
+
+            const tipoPromocion = document.getElementById('tipoPromocionSelect').value;
+            const previewGrid = document.getElementById('previewGrid');
+            previewGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; font-weight: bold; padding: 20px;">🎨 Generando carteles...</p>';
+
+            const fragment = document.createDocumentFragment();
+
+            for (let p of listaOrigen) {
+                let urlResult;
+                if (tipoPromocion === 'miercoles') urlResult = await crearCartelMiercoles(p);
+                else if (tipoPromocion === 'jueves') urlResult = await crearCartelJueves(p);
+                else if (tipoPromocion === 'viernes') urlResult = await crearCartelViernes(p);
+                else if (tipoPromocion === 'sabadoDomingo') urlResult = await crearCartelFinDeSemana(p);
+
+                if (urlResult) {
+                    const cantidadCopias = parseInt(p.copias) || 1;
+                    for (let i = 0; i < cantidadCopias; i++) {
+                        const img = document.createElement('img');
+                        img.src = urlResult;
+                        fragment.appendChild(img);
+                    }
+                }
+            }
+
+            previewGrid.innerHTML = '';
+            previewGrid.appendChild(fragment);
+            window.scrollTo({ top: previewGrid.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function imprimirPC() {
+            const imagenes = document.querySelectorAll('#previewGrid img');
+            if (imagenes.length === 0) { alert("Primero generá los carteles."); return; }
+
+            const wPrint = window.open('', '_blank');
+            if (!wPrint) { alert("Permití las ventanas emergentes (pop-ups)."); return; }
+
+            let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Imprimir</title><style>
+                @page { size: A4 landscape; margin: 0; }
+                body { margin: 0; padding: 0; background: white; }
+                img { width: 100vw; height: 100vh; object-fit: contain; page-break-after: always; display: block; }
+            </style></head><body>`;
+            imagenes.forEach(img => { html += `<img src="${img.src}">`; });
+            html += `</body></html>`;
+
+            wPrint.document.open();
+            wPrint.document.write(html);
+            wPrint.document.close();
+            setTimeout(() => { wPrint.focus(); wPrint.print(); }, 250);
+        }
+
+        async function descargarPDF() {
+            const imagenes = document.querySelectorAll('#previewGrid img');
+            if (imagenes.length === 0) { alert("Primero generá los carteles."); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const pdfAncho = doc.internal.pageSize.getWidth();
+            const pdfAlto = doc.internal.pageSize.getHeight();
+
+            for (let i = 0; i < imagenes.length; i++) {
+                if (i > 0) doc.addPage();
+                doc.addImage(imagenes[i].src, 'PNG', 0, 0, pdfAncho, pdfAlto);
+            }
+            doc.save('carteles_ofertas.pdf');
+        }
+    </script>
+</body>
+</html>
